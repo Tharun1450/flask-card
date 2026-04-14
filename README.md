@@ -12,7 +12,7 @@ FlashGen AI is a premium, RAG-powered web application that turns your study mate
 ## 🛠️ Prerequisites
 - **Python 3.10+**
 - **Ollama**: [Download and install Ollama](https://ollama.ai/)
-- **Phi-3 Model**: Run `ollama pull phi3` to download the default model.
+- **Gemma 2B Model**: Run `ollama pull gemma:2b` to download the default model.
 
 ## 🚀 Setup & Installation
 
