@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>FlashGen AI — Smart Flashcard Generator</title>
+  <meta name="description"
+    content="Upload your study materials and get AI-generated flashcards instantly using local Ollama. Perfect for students." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
+    rel="stylesheet" />
+  <link rel="stylesheet" href="/static/css/style.css" />
+  <style>
+    /* OCR Toggle Styles */
+    .ocr-toggle-container {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 20px;
+      padding: 12px;
+      background: rgba(255, 255, 255, 0.03);
+      border-radius: 12px;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .toggle-switch {
+      position: relative;
+      display: inline-block;
+      width: 44px;
+      height: 24px;
+    }
+
+    .toggle-switch input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+
+    .slider {
+      position: absolute;
+      cursor: pointer;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background-color: rgba(255, 255, 255, 0.2);
+      transition: .4s;
+      border-radius: 24px;
+    }
+
+    .slider:before {
+      position: absolute;
+      content: "";
+      height: 18px;
+      width: 18px;
+      left: 3px;
+      bottom: 3px;
+      background-color: white;
+      transition: .4s;
+      border-radius: 50%;
+    }
+
+    input:checked+.slider {
+      background-color: #bb86fc;
+    }
+
+    input:checked+.slider:before {
+      transform: translateX(20px);
+    }
+
+    .ocr-label {
+      font-size: 0.95rem;
+      font-weight: 500;
+      color: rgba(255, 255, 255, 0.9);
+    }
+
+    .ocr-label small {
+      color: rgba(255, 255, 255, 0.5);
+      font-weight: 400;
+    }
+
+    .ocr-warning {
+      margin-left: auto;
+      font-size: 0.8rem;
+      color: #ffb74d;
+      background: rgba(255, 183, 77, 0.1);
+      padding: 4px 8px;
+      border-radius: 6px;
+    }
+
+    /* Chatbot Styles */
+    .chatbot-section {
+      background: rgba(255, 255, 255, 0.03);
+      border-radius: 12px;
+      padding: 24px;
+      margin-top: 40px;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+    .chat-container { display: flex; flex-direction: column; gap: 16px; height: 400px; }
+    .chat-messages { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 12px; padding-right: 8px; }
+    .chat-message { max-width: 80%; padding: 12px 16px; border-radius: 12px; line-height: 1.4; font-size: 0.95rem; }
+    .chat-message.bot { align-self: flex-start; background: rgba(187, 134, 252, 0.15); border: 1px solid rgba(187, 134, 252, 0.3); color: rgba(255, 255, 255, 0.9); border-bottom-left-radius: 4px; }
+    .chat-message.user { align-self: flex-end; background: rgba(3, 218, 198, 0.15); border: 1px solid rgba(3, 218, 198, 0.3); color: rgba(255, 255, 255, 0.9); border-bottom-right-radius: 4px; }
+    .chat-input-area { display: flex; gap: 12px; }
+    .chat-input { flex: 1; padding: 12px 16px; border-radius: 8px; border: 1px solid rgba(255, 255, 255, 0.2); background: rgba(0, 0, 0, 0.2); color: white; font-size: 0.95rem; font-family: inherit; }
+    .chat-input:focus { outline: none; border-color: #bb86fc; }
+  </style>
+</head>
+
+<body>
+
+  <!-- Background orbs -->
+  <div class="bg-orb orb-1"></div>
+  <div class="bg-orb orb-2"></div>
+  <div class="bg-orb orb-3"></div>
+
+  <!-- ===== HEADER ===== -->
+  <header class="header">
+    <div class="header-inner">
+      <div class="logo">
+        <span class="logo-icon">⚡</span>
+        <span class="logo-text">FlashGen <span class="logo-accent">AI</span></span>
+      </div>
+      <div class="header-badge">Powered by Ollama · gemma2:2b</div>
+    </div>
+  </header>
+
+  <!-- ===== HERO ===== -->
+  <section class="hero">
+    <div class="hero-content">
+      <h1 class="hero-title">Turn Study Notes into<br /><span class="gradient-text">Smart Flashcards</span></h1>
+      <p class="hero-subtitle">Upload a PDF, DOCX, PPT or PPTX — get AI-generated flashcards in seconds. 100% local,
+        100% private.</p>
+    </div>
+  </section>
+
+  <!-- ===== UPLOAD ZONE ===== -->
+  <main class="main-container">
+    <div class="upload-card" id="uploadCard">
+      <div class="upload-zone" id="uploadZone">
+        <input type="file" id="fileInput" accept=".pdf,.docx,.ppt,.pptx" hidden />
+        <div class="upload-icon">📄</div>
+        <p class="upload-title">Drag &amp; drop your file here</p>
+        <p class="upload-sub">or</p>
+        <button class="btn-primary" id="browseBtn">Browse File</button>
+        <p class="upload-formats">Supported: PDF, DOCX, PPT, PPTX · Max 32 MB</p>
+      </div>
+
+      <!-- File selected state -->
+      <div class="file-info" id="fileInfo" style="display:none;">
+        <div class="file-chip">
+          <span class="file-chip-icon">📎</span>
+          <span class="file-chip-name" id="fileChipName"></span>
+          <button class="file-chip-remove" id="removeFileBtn" title="Remove">✕</button>
+        </div>
+        <div class="ocr-toggle-container">
+          <label class="toggle-switch">
+            <input type="checkbox" id="ocrToggle">
+            <span class="slider round"></span>
+          </label>
+          <span class="ocr-label">OCR Mode <small>(For scanned images)</small></span>
+          <div class="ocr-warning">⚠️ Requires Tesseract installed</div>
+        </div>
+        <button class="btn-generate" id="generateBtn">
+          <span class="btn-generate-icon">✨</span> Generate Flashcards
+        </button>
+      </div>
+    </div>
+
+    <!-- ===== PROGRESS ===== -->
+    <div class="progress-section" id="progressSection" style="display:none;">
+      <div class="progress-card">
+        <div class="spinner"></div>
+        <p class="progress-title" id="progressTitle">Extracting text…</p>
+        <p class="progress-sub">This may take a minute for large files.</p>
+      </div>
+    </div>
+
+    <!-- ===== ERROR ===== -->
+    <div class="error-banner" id="errorBanner" style="display:none;">
+      <span class="error-icon">⚠️</span>
+      <span class="error-msg" id="errorMsg"></span>
+      <button class="error-close" id="errorClose">✕</button>
+    </div>
+
+    <!-- ===== RESULTS ===== -->
+    <section class="results-section" id="resultsSection" style="display:none;">
+      <div class="results-header">
+        <div>
+          <h2 class="results-title">Your Flashcards</h2>
+          <p class="results-count" id="resultsCount"></p>
+        </div>
+        <div class="results-actions">
+          <button class="btn-secondary" id="exportBtn">⬇ Export JSON</button>
+          <button class="btn-secondary" id="resetBtn">↩ New File</button>
+        </div>
+      </div>
+
+      <!-- Filter bar -->
+      <div class="filter-bar">
+        <button class="filter-btn active" data-diff="all">All</button>
+        <button class="filter-btn easy" data-diff="Easy">Easy</button>
+        <button class="filter-btn medium" data-diff="Medium">Medium</button>
+        <button class="filter-btn hard" data-diff="Hard">Hard</button>
+      </div>
+
+      <!-- Cards grid -->
+      <div class="cards-grid" id="cardsGrid"></div>
+    </section>
+
+    <!-- ===== CHATBOT ===== -->
+    <section class="chatbot-section" id="chatbotSection" style="display:none;">
+      <h2 class="results-title">Chat with Document</h2>
+      <p style="color: rgba(255,255,255,0.6); margin-bottom: 20px; font-size: 0.9rem;">Ask questions based on the uploaded document.</p>
+      <div class="chat-container">
+        <div class="chat-messages" id="chatMessages">
+          <div class="chat-message bot">
+            <span class="msg-text">Hello! Ask me anything about the uploaded document. The answers will be strictly generated from the document context.</span>
+          </div>
+        </div>
+        <div class="chat-input-area">
+          <input type="text" id="chatInput" class="chat-input" placeholder="Ask a question..." autocomplete="off" />
+          <button class="btn-primary" id="chatSendBtn" disabled>Send</button>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- ===== FOOTER ===== -->
+  <footer class="footer">
+    <p>FlashGen AI · RAG-powered · Runs locally with Ollama gemma2:2b</p>
+  </footer>
+
+  <script src="/static/js/app.js"></script>
+</body>
+
+</html>

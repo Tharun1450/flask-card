@@ -1,0 +1,13 @@
+# Environments
+venv/
+.env
+
+# Cache and temporary files
+__pycache__/
+*.pyc
+
+# Database and Uploads
+chroma_db/
+uploads/
+temp_out.txt
+flash.zip
